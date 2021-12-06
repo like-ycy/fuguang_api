@@ -9,10 +9,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.views import ObtainJSONWebToken
 
-from courses.models import Course
+from courses.models import Course, CourseLesson
 from courses.paginations import CourseListPageNumberPagination
 from fuguangapi.utils.tencentcloudapi import TencentCloudAPI, TencentCloudSDKException
-from .models import User, UserCourse
+from .models import User, UserCourse, StudyProgress
 from .serializers import UserRegisterModelSerializer, UserCourseModelSerializer
 # from ronglianyunapi import send_sms
 # from mycelery.sms.tasks import send_sms
@@ -128,4 +128,55 @@ class CourseListAPiView(ListAPIView):
 
 
 class UserCourseAPIView(GenericAPIView):
-    pass
+    """学习进度"""
+    permission_classes = [IsAuthenticated]
+    serializers_class = UserCourseModelSerializer
+
+    def get(self, request, course_id):
+        """获取用户的课程学习进度"""
+        user = request.user
+        try:
+            user_course = UserCourse.objects.get(user=user, course_id=course_id)
+        except UserCourse.DoesNotExist:
+            return Response({"errmsg": "当前课程未购买"}, status=status.HTTP_400_BAD_REQUEST)
+        # 章节id
+        chapter_id = user_course.chapter_id
+        if chapter_id:
+            """学习过课程"""
+            lesson = user_course.lesson
+        else:
+            """未学习过课程"""
+            # 获取课程第1个章节
+            chapter = user_course.course.chapter_list.order_by('orders').first()
+            # 获取课程第1个章节的第一个课时
+            lesson = chapter.lesson_list.order_by('orders').first()
+            # 更新用户学习进度
+            user_course.chapter = chapter
+            user_course.lesson = lesson
+            user_course.save()
+
+        serializer = self.get_serializer(user_course)
+        data = serializer.data
+        # 获取课时类型和连接
+        data['lesson_type'] = lesson.lesson_type
+        data['lesson_link'] = lesson.lesson_link
+
+        return Response(data)
+
+
+class StudyLesson(APIView):
+    """用户在当前课时的学习进度"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        lesson_id = int(request.query_params.get("lesson"))
+        user = request.user
+
+        # 查找课时
+        lesson = CourseLesson.objects.get(id=lesson_id)
+        progress = StudyProgress.objects.filter(user=user, lesson=lesson).first()
+
+        # 如果查询没有进度，则默认进度进度为0
+        if progress is None:
+            progress = StudyProgress.objects.create(user=user, lesson=lesson, study_time=0)
+        return Response(progress.study_time)
