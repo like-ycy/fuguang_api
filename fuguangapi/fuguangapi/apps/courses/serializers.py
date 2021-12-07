@@ -1,4 +1,4 @@
-﻿from django.conf import settings
+from django.conf import settings
 from drf_haystack.serializers import HaystackSerializer
 from rest_framework import serializers
 
