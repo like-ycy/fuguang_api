@@ -1,4 +1,4 @@
-name: Sync Github Repos To Gitee
+name: Sync Github Repos To Gitee 注意仓库为public
 
 on:
   push:
