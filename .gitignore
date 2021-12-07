@@ -134,6 +134,7 @@ dmypy.json
 **/migrations/*.py
 **/logs/
 **/logs/*.log
+**/settings/*.py
 
 
 
