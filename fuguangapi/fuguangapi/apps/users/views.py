@@ -1,6 +1,8 @@
+import logging
 import random
 
 from django.conf import settings
+from django.db import transaction
 from django_redis import get_redis_connection
 from rest_framework import status
 from rest_framework.generics import CreateAPIView, ListAPIView, GenericAPIView
@@ -9,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_jwt.views import ObtainJSONWebToken
 
+import constants
 from courses.models import Course, CourseLesson
 from courses.paginations import CourseListPageNumberPagination
 from fuguangapi.utils.tencentcloudapi import TencentCloudAPI, TencentCloudSDKException
@@ -17,6 +20,8 @@ from .serializers import UserRegisterModelSerializer, UserCourseModelSerializer
 # from ronglianyunapi import send_sms
 # from mycelery.sms.tasks import send_sms
 from .tasks import send_sms
+
+logger = logging.getLogger('django')
 
 
 class LoginAPIView(ObtainJSONWebToken):
@@ -164,7 +169,7 @@ class UserCourseAPIView(GenericAPIView):
         return Response(data)
 
 
-class StudyLesson(APIView):
+class StudyLessonAPIView(APIView):
     """用户在当前课时的学习进度"""
     permission_classes = [IsAuthenticated]
 
@@ -180,3 +185,67 @@ class StudyLesson(APIView):
         if progress is None:
             progress = StudyProgress.objects.create(user=user, lesson=lesson, study_time=0)
         return Response(progress.study_time)
+
+
+class StudyProgressAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """添加课时学习进度"""
+        try:
+            # 1. 接收客户端提交的视频进度和课时ID
+            study_time = int(request.data.get("time"))
+            lesson_id = int(request.data.get("lesson"))
+            user = request.user
+
+            # 判断当前课时是否免费或者当前课时所属的课程是否被用户购买了
+
+            # 判断本次更新学习时间是否超出阈值，当超过阈值，则表示用户已经违规快进了。
+            if study_time > constants.MAV_SEEK_TIME:
+                raise Exception
+
+            # 查找课时
+            lesson = CourseLesson.objects.get(pk=lesson_id)
+
+        except:
+            return Response({"error": "无效的参数或当前课程信息不存在！"})
+
+        with transaction.atomic():
+            save_id = transaction.savepoint()
+            try:
+                # 2. 记录课时学习进度
+                progress = StudyProgress.objects.filter(user=user, lesson=lesson).first()
+
+                if progress is None:
+                    """新增一条用户与课时的学习记录"""
+                    progress = StudyProgress(
+                        user=user,
+                        lesson=lesson,
+                        study_time=study_time
+                    )
+                else:
+                    """直接更新现有的学习时间"""
+                    progress.study_time = int(progress.study_time) + int(study_time)
+
+                progress.save()
+
+                # 3. 记录课程学习的总进度
+                user_course = UserCourse.objects.get(user=user, course=lesson.course)
+                user_course.study_time = int(user_course.study_time) + int(study_time)
+
+                # 用户如果往后观看章节，则记录下
+                if lesson.chapter.orders > user_course.chapter.orders:
+                    user_course.chapter = lesson.chapter
+
+                # 用户如果往后观看课时，则记录下
+                if lesson.orders > user_course.lesson.orders:
+                    user_course.lesson = lesson
+
+                user_course.save()
+
+                return Response({"message": "课时学习进度更新完成！"})
+
+            except Exception as e:
+                logger.error(f"更新课时进度失败！:{e}")
+                transaction.savepoint_rollback(save_id)
+                return Response({"error": "当前课时学习进度丢失！"})

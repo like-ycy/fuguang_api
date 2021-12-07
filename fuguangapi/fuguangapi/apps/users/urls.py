@@ -9,5 +9,6 @@ urlpatterns = [
     re_path('^sms/(?P<mobile>1[3-9]\d{9})/$', views.SMSAPIView.as_view()),
     path("course/", views.CourseListAPiView.as_view()),
     re_path("^course/(?P<course_id>[0-9]+)/$", views.UserCourseAPIView.as_view()),
-    path("lesson/", views.StudyLesson.as_view()),
+    path("lesson/", views.StudyLessonAPIView.as_view()),
+    path("progress/", views.StudyProgressAPIView.as_view()),
 ]
