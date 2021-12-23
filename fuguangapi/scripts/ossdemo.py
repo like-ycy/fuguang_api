@@ -19,6 +19,3 @@ if __name__ == '__main__':
     # 本地的文件路径
     with open('/home/wang/fuguang/fuguangapi/fuguangapi/uploads/avatar/2021/avatar.jpg', 'rb') as f:
         result = bucket.put_object(image, f.read())
-        print(result)
-        print(result.status)
-        print(f'{OSS_SERVER_URL}/{image}')

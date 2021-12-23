@@ -105,7 +105,6 @@ class HotWordAPIView(APIView):
         redis.zunionstore(constants.DEFAULT_HOT_WORD, date_list, aggregate='sum')
         # 按分数store进行倒序显示排名靠前的指定数量的热词
         word_list = redis.zrevrange(constants.DEFAULT_HOT_WORD, 0, constants.HOT_WORD_LENGTH - 1)
-        print(word_list)
         return Response(word_list)
 
 

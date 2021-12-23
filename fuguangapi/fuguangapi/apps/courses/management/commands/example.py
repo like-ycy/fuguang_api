@@ -37,7 +37,6 @@ class Command(BaseCommand):
                 signature="没有教不会的学生，有就是你不行！",
                 brief=f"从业3年，管理班级无数，联系电话：{faker.unique.phone_number()}，邮箱地址：{faker.unique.company_email()}",
             )
-        print('添加老师完成')
 
     def add_course(self, options):
         """添加课程信息"""

@@ -43,7 +43,6 @@ class LoginAPIView(ObtainJSONWebToken):
                 request._request.META.get("REMOTE_ADDR"),
             )
             if result:
-                # print("验证通过")
                 return super().post(request, *args, **kwargs)
             else:
                 raise TencentCloudSDKException

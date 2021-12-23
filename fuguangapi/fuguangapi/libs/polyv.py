@@ -42,12 +42,10 @@ class PolyvPlayer(object):
         key_temp = sorted(plain)
         for key in key_temp:
             plain_sorted[key] = plain[key]
-        print(plain_sorted)
 
         plain_string = ''
         for k, v in plain_sorted.items():
             plain_string += str(k) + str(v)
-        print(plain_string)
 
         # 首尾拼接上秘钥
         sign_data = self.secretKey + plain_string + self.secretKey

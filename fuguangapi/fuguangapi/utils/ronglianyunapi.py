@@ -1,6 +1,7 @@
 import json
-from ronglian_sms_sdk import SmsSDK
+
 from django.conf import settings
+from ronglian_sms_sdk import SmsSDK
 
 
 def send_sms(tid, mobile, datas):
@@ -18,7 +19,5 @@ def send_sms(tid, mobile, datas):
     result = sdk.sendMessage(tid, mobile, datas)
     # 返回结果转换为字典
     response = json.loads(result)
-    #
-    # print(response, type(response))
     # statusCode值为 000000 的时候表示发送成功
     return response.get("statusCode") == "000000"
